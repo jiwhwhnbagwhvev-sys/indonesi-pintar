@@ -1,0 +1,883 @@
+<!doctype html>
+
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ujian Tanpa Kertas — Indonesia Pintar</title><!-- ===== Styles: Welcome Page ===== --><style>
+  body{margin:0;font-family:Inter, Segoe UI, Roboto, Arial, sans-serif}
+  .top{background:#2196f3;color:#fff;padding:14px}
+  .top h2{margin:6px 0 0;font-size:18px}
+  .welcome{padding:16px;text-align:center}
+  .welcome h1{background:#4caf50;color:#fff;padding:12px;border-radius:10px}
+  .welcome p{color:#333;font-size:14px;margin:12px 0}
+  .single-btn{max-width:360px;margin:24px auto 0}
+  .btn{background:#fff;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1);padding:16px;cursor:pointer;text-align:center;font-weight:700}
+  .btn:hover{background:#e3f2fd}
+  #examPage{display:none}
+</style><!-- ===== Styles: Exam Page (from your provided HTML) ===== --><style>
+  :root{--bg:#f3f8ff;--card:#fff;--accent:#2563eb;--muted:#64748b}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#eef6ff,#f8fbff)}
+  body{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .wrap{max-width:1100px;margin:20px auto;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.06)}
+  h1{margin:0 0 6px;font-size:20px;color:#0f172a}
+  p.small{margin:0 0 12px;color:var(--muted)}
+  label{display:block;margin:8px 0 6px;color:#334155;font-weight:600}
+  input[type=text], select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef8;font-size:15px}
+  .btn{display:inline-block;width:100%;padding:12px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#06b6d4);color:#fff;border:none;font-weight:700;cursor:pointer}
+  .btn-muted{background:#eef2ff;color:#0f172a}
+  #qr-reader{margin-top:12px;border-radius:10px;overflow:hidden;display:none}
+  #examFrame{width:100%;height:100vh;border:none;display:none}
+  #topBar{position:fixed;left:0;right:0;top:0;z-index:450;display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(90deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));box-shadow:0 4px 18px rgba(2,6,23,0.12)}
+  #timerDisplay{font-weight:800;color:#111827}
+  #backBtn{background:rgba(0,0,0,.6);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:600;color:#fff}
+  .overlay-box{background:#071129;padding:20px;border-radius:12px;text-align:center;max-width:420px}
+  .overlay-box h2{color:#ff6b6b;margin:0 0 8px}
+  /* watermark */
+  .watermark{position:fixed;inset:0;pointer-events:none;z-index:440;opacity:.18;display:none}
+  .watermark canvas{width:100%;height:100%}
+  @media(max-width:900px){ .wrap{grid-template-columns:1fr;padding:12px} #topBar{padding:8px} }
+</style></head>
+<body oncontextmenu="return false"><!-- ===
+  </div>
+</div><!-- ===== Exam Page (your full HTML inserted) ===== --><div id="examPage" style="display:none">  <!-- TOP BAR (timer + back) -->  <div id="topBar">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="font-weight:700">Indonesia Pintar</div>
+      <div id="timerDisplay">00:00:00</div>
+    </div>
+    <div id="backBtn">⬅ Kembali</div>
+  </div>  <!-- MAIN LOGIN UI -->  <div class="wrap" id="mainUI">
+    <div class="card">
+      <h1>Indonesia Pintar — Login</h1>
+      <p class="small">Isi nama, pilih durasi ujian (guru), lalu scan QR atau masukkan KODE/URL. QR bisa berisi format <code>KODE</code>, <code>URL</code>, atau <code>KODE|30</code> untuk override durasi menit.</p><label>Nama Siswa</label>
+  <input id="studentName" type="text" placeholder="Contoh: isi nama kamu" autocomplete="off"/>
+
+  <label>Durasi Ujian (menit)</label>
+  <select id="examDuration">
+    <option value="">Pilih durasi</option>
+    <option value="15">15</option>
+    <option value="30">30</option>
+    <option value="45">45</option>
+    <option value="60">60</option>
+    <option value="80">80</option>
+    <option value="100">100</option>
+  </select>
+
+  <label>Kode / Link Ujian</label>
+  <input id="examUrl" type="text" placeholder="Scan atau ketik KODE/URL (opsional)" autocomplete="off"/>
+
+  <div style="display:flex;gap:10px;margin-top:12px">
+    <button id="startBtn" class="btn" style="flex:1">Mulai Ujian</button>
+    <button id="scanBtn" class="btn btn-muted" style="flex:1">📷 Scan QR</button>
+  </div>
+
+  <div id="qr-reader"></div>
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+  <h1 style="font-size:18px;margin:0">Petunjuk Pengawas</h1>
+  <p class="small">1) Isi durasi sebelum siswa mulai. 2) QR dapat berisi kode atau URL Google Form. 3) Jika siswa keluar >3 detik → sesi akan direset.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button id="demoQRBtn" class="btn btn-muted">Contoh: ABC123</button>
+    <button id="hideUrlBtn" class="btn btn-muted">Sembunyikan Input URL</button>
+  </div>
+</div>
+
+  </div>  <!-- watermark overlay -->  <div class="watermark" id="watermark"><canvas id="wmCanvas"></canvas></div>  <!-- iframe yg menampilkan Google Form -->  <iframe id="examFrame" referrerpolicy="no-referrer" title="Ujian"></iframe>  <!-- overlay pelanggaran / selesai -->  <div class="overlay" id="overlay">
+    <div class="overlay-box">
+      <h2>⚠ Sesi Berakhir</h2>
+      <p id="overlayMsg">Anda keluar dari ujian atau waktu habis. Sesi direset.</p>
+      <button id="overlayOk" class="btn" style="width:auto;margin-top:10px">OK</button>
+    </div>
+  </div>  <!-- suara alarm --><audio id="alarmSound"><source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg"></audio>
+
+</div><!-- ===== Welcome Scripts (clock + switch) ===== --><script>
+  function updateClock(){
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0');
+    const m=String(now.getMinutes()).padStart(2,'0');
+    const s=String(now.getSeconds()).padStart(2,'0');
+    const clock=document.getElementById('clock');
+    if(clock) clock.textContent=`${h}:${m}:${s}`;
+  }
+  setInterval(updateClock,1000);updateClock();
+
+  function openExam(){
+    document.getElementById('welcomePage').style.display='none';
+    document.getElementById('examPage').style.display='block';
+  }
+</script><!-- ===== QR library for Exam Page ===== --><script src="https://unpkg.com/html5-qrcode"></script><!-- ===== Exam Scripts (from your provided HTML, with minor rename to avoid function name clash) ===== --><script>
+/* ========= EDIT: PETA KODE -> URL GOOGLE FORM ========== */
+const kodeKeUjian = {
+  "ABC123": "https://docs.google.com/forms/d/e/1FAIpQLSfExampleForm1/viewform",
+  "XYZ789": "https://docs.google.com/forms/d/e/1FAIpQLSfExampleForm2/viewform"
+};
+/* ======================================================= */
+
+const studentName = document.getElementById('studentName');
+const examDuration = document.getElementById('examDuration');
+const examUrl = document.getElementById('examUrl');
+const startBtn = document.getElementById('startBtn');
+const scanBtn = document.getElementById('scanBtn');
+const qrReader = document.getElementById('qr-reader');
+const mainUI = document.getElementById('mainUI');
+const examFrame = document.getElementById('examFrame');
+const topBar = document.getElementById('topBar');
+const timerDisplay = document.getElementById('timerDisplay');
+const backBtn = document.getElementById('backBtn');
+const overlay = document.getElementById('overlay');
+const overlayMsg = document.getElementById('overlayMsg');
+const overlayOk = document.getElementById('overlayOk');
+const alarmSound = document.getElementById('alarmSound');
+const watermark = document.getElementById('watermark');
+const wmCanvas = document.getElementById('wmCanvas');
+
+let html5QrCode = null;
+let ujianAktif = false;
+let blurTimeout = null;
+let suppressReset = false;
+let countdownInterval = null;
+
+/* SESSION (sessionStorage) key */
+const SESSION_KEY = '__indonesia_pintar_session_v1';
+
+/* Helpers */
+function resolveTarget(input){
+  if(!input) return null;
+  input = input.trim();
+  if(/^https?:\/\//i.test(input)) return input;
+  return kodeKeUjian[input] || null;
+}
+function addCacheBuster(url){
+  try{ const sep = url.includes('?') ? '&' : '?'; return url + sep + '__t=' + Date.now(); } catch(e){ return url; }
+}
+function pad(n){ return n<10 ? '0'+n : n; }
+
+/* Watermark drawing */
+function showWatermark(name){
+  watermark.style.display='block';
+  drawWatermark(name);
+  if(window._wmTimer) clearInterval(window._wmTimer);
+  window._wmTimer = setInterval(()=>drawWatermark(name),4000);
+}
+function hideWatermark(){
+  watermark.style.display='none';
+  if(window._wmTimer) clearInterval(window._wmTimer);
+}
+function drawWatermark(name){
+  const ctx = wmCanvas.getContext('2d');
+  wmCanvas.width = window.innerWidth;
+  wmCanvas.height = window.innerHeight;
+  ctx.clearRect(0,0,wmCanvas.width,wmCanvas.height);
+  ctx.save();
+  ctx.translate(wmCanvas.width/2, wmCanvas.height/2);
+  ctx.rotate(-Math.PI/6);
+  ctx.font = '18px Arial';
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.textAlign = 'center';
+  const stamp = new Date().toLocaleString();
+  const txt = `${name} • ${stamp}`;
+  const stepX = 320, stepY = 160;
+  for(let y=-wmCanvas.height; y<wmCanvas.height; y+=stepY){
+    for(let x=-wmCanvas.width; x<wmCanvas.width; x+=stepX){
+      ctx.fillText(txt, x, y);
+    }
+  }
+  ctx.restore();
+}
+window.addEventListener('resize', ()=>{ if(watermark.style.display==='block') drawWatermark(studentName.value.trim()||'Siswa'); });
+
+/* Timer */
+function startCountdown(endTimestamp){
+  if(countdownInterval) clearInterval(countdownInterval);
+  updateTimer(endTimestamp);
+  countdownInterval = setInterval(()=> updateTimer(endTimestamp), 1000);
+}
+function updateTimer(endTimestamp){
+  const now = Date.now();
+  const diff = Math.max(0, endTimestamp - now);
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  const s = Math.floor((diff%60000)/1000);
+  timerDisplay.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  if(diff <= 0){
+    clearInterval(countdownInterval);
+    overlayMsg.textContent = 'Waktu habis. Halaman akan ditutup.';
+    resetExam(true);
+  }
+}
+
+/* Session store in sessionStorage (survive reload in same tab) */
+function saveSession(session){
+  try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch(e){}
+}
+function loadSession(){
+  try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch(e){ return null; }
+}
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+/* Open exam UI (renamed to avoid clash with welcome openExam) */
+function openExamSession(session){
+  document.getElementById('welcomePage').style.display='none';
+  document.getElementById('examPage').style.display='block';
+  mainUI.style.display='none';
+  examFrame.src = addCacheBuster(session.target);
+  examFrame.style.display='block';
+  topBar.style.display='flex';
+  backBtn.style.display='inline-block';
+  ujianAktif = true;
+  showWatermark(session.name);
+  startCountdown(session.endTimestamp);
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  window._presenceTimer = setInterval(()=> localStorage.setItem('__ip_presence', Date.now().toString()), 1500);
+}
+
+/* Start exam (from form) */
+function startExam(){
+  const name = studentName.value.trim();
+  const dur = parseInt(examDuration.value,10);
+  const raw = examUrl.value.trim();
+  if(!name){ alert('Masukkan nama siswa'); return; }
+  if(!dur || isNaN(dur)){ alert('Pilih durasi ujian (menit)'); return; }
+  const target = resolveTarget(raw);
+  if(!target){ alert('Masukkan KODE/URL valid atau scan QR'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+  try{ enterFullscreen(); }catch(e){}
+}
+
+/* Start exam by QR (with optional dur override) */
+function startExamByTarget(target, durOverride){
+  const name = studentName.value.trim();
+  const dur = durOverride || parseInt(examDuration.value,10);
+  if(!name){ alert('Isi nama dulu sebelum scan'); return; }
+  if(!dur || isNaN(dur)){ alert('Durasi tidak valid. Set di form atau QR sebagai KODE|30'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+  try{ enterFullscreen(); }catch(e){}
+}
+
+/* End / Reset */
+function endExam(){
+  ujianAktif = false;
+  hideWatermark();
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  try{ window.close(); }catch(e){}
+  alert('Ujian selesai. Terima kasih.');
+}
+function resetExam(tryClose=false){
+  if(!ujianAktif) return;
+  ujianAktif = false;
+  hideWatermark();
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  overlay.style.display='flex';
+  alarmSound.currentTime = 0; alarmSound.play().catch(()=>{});
+  setTimeout(()=>{
+    try{ if(tryClose) window.close(); }catch(e){}
+  },600);
+}
+
+/* fullscreen helpers */
+function enterFullscreen(){ const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }
+function exitFullscreen(){ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+
+/* Back button (UI) */
+backBtn.addEventListener('click', ()=> {
+  suppressReset = true;
+  ujianAktif = false;
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  hideWatermark();
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  try{ exitFullscreen(); }catch(e){}
+});
+
+/* overlay OK */
+overlayOk.addEventListener('click', ()=> { overlay.style.display='none'; });
+
+/* Block common shortcuts / copy / paste / right-click / print */
+['copy','cut','paste','selectstart','dragstart','drop'].forEach(ev => document.addEventListener(ev, e=>e.preventDefault(), {capture:true}));
+document.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('keydown', e=>{
+  const k = e.key.toUpperCase();
+  if(k==='F12' || ((e.ctrlKey||e.metaKey) && e.shiftKey && ['I','J','C'].includes(k)) || ((e.ctrlKey||e.metaKey) && ['U','S','P','C','X','V','A'].includes(k))){
+    e.preventDefault(); e.stopPropagation();
+  }
+  if(k === 'PRINTSCREEN' || k === 'PRTSC' || e.keyCode === 44){
+    resetExam();
+  }
+});
+
+/* Visibility: jika hidden > 3 detik -> reset */
+document.addEventListener('visibilitychange', ()=>{
+  if(ujianAktif){
+    if(document.hidden){
+      blurTimeout = setTimeout(()=>{ if(ujianAktif) resetExam(); }, 3000);
+    } else {
+      clearTimeout(blurTimeout);
+    }
+  }
+});
+
+/* fullscreen change */
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement){
+    if(suppressReset){ suppressReset=false; return; }
+    if(ujianAktif) resetExam();
+  }
+});
+
+/* message from iframe */
+window.addEventListener('message', e=>{ if(e.data === 'ujian_selesai') endExam(); });
+
+/* QR scanner setup */
+scanBtn.addEventListener('click', ()=>{
+  qrReader.style.display = 'block';
+  if(!html5QrCode) html5QrCode = new Html5Qrcode('qr-reader');
+  html5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: 250 },
+    decodedText => {
+      html5QrCode.stop().then(()=>{
+        qrReader.style.display='none';
+        const parts = decodedText.split('|').map(s=>s.trim());
+        const codeOrUrl = parts[0];
+        const override = parts[1] ? parseInt(parts[1],10) : null;
+        const target = resolveTarget(codeOrUrl) || (/^https?:\/\//i.test(codeOrUrl) ? codeOrUrl : null);
+        if(!target){ alert('Kode/URL tidak dikenal. Minta ke pengawas.'); return; }
+        startExamByTarget(target, override);
+      }).catch(()=>{ qrReader.style.display='none'; });
+    },
+    _err => {}
+  ).catch(err => alert('Gagal akses kamera: ' + err));
+});
+
+/* Multi-tab detection */
+(function multiTabDetect(){
+  try{
+    const key = '__ip_presence';
+    setInterval(()=> { if(ujianAktif) localStorage.setItem(key, Date.now().toString()); }, 1500);
+    window.addEventListener('storage', e => {
+      if(e.key === '__ip_presence' && ujianAktif){
+        resetExam();
+      }
+    });
+  }catch(e){}
+})();
+
+/* Restore session on reload (sessionStorage) */
+(function restoreSession(){
+  const s = (function(){ try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }catch(e){return null;} })();
+  if(s && s.target && s.endTimestamp && s.name){
+    if(Date.now() >= s.endTimestamp){ clearSession(); return; }
+    studentName.value = s.name;
+    examUrl.value = s.target;
+    const remainMin = Math.max(1, Math.ceil((s.endTimestamp - Date.now())/60000));
+    examDuration.value = remainMin.toString();
+    openExamSession(s);
+  }
+})();
+
+/* helpers: save session (duplicate kept as in original) */
+function saveSession(obj){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(obj)); }catch(e){} }
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+/* start button */
+startBtn.addEventListener('click', ()=>{
+  const raw = examUrl.value.trim();
+  const target = resolveTarget(raw) || ( /^https?:\/\//i.test(raw) ? raw : null );
+  if(!target){ alert('Masukkan KODE/URL valid atau scan QR'); return; }
+  const dur = parseInt(examDuration.value,10);
+  if(!dur || isNaN(dur)){ alert('Pilih durasi ujian'); return; }
+  const name = studentName.value.trim();
+  if(!name){ alert('Isi nama siswa'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+});
+
+/* helper demo & hide URL */
+document.getElementById('demoQRBtn').addEventListener('click', ()=> { examUrl.value='ABC123'; alert('Contoh kode ABC123 diisi'); });
+document.getElementById('hideUrlBtn').addEventListener('click', ()=> {
+  examUrl.style.display = examUrl.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('hideUrlBtn').innerText = examUrl.style.display === 'none' ? 'Tampilkan Input URL' : 'Sembunyikan Input URL';
+});
+
+/* defensive: detect big height changes (devtools) */
+let lastInnerHeight = window.innerHeight;
+setInterval(()=> {
+  if(ujianAktif && Math.abs(window.innerHeight - lastInnerHeight) > 220) resetExam();
+  lastInnerHeight = window.innerHeight;
+},1000);
+</script></body>
+</html>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ujian Tanpa Kertas — Indonesia Pintar</title><!-- ===== Styles: Welcome Page ===== --><style>
+  body{margin:0;font-family:Inter, Segoe UI, Roboto, Arial, sans-serif}
+  .top{background:#2196f3;color:#fff;padding:14px}
+  .top h2{margin:6px 0 0;font-size:18px}
+  .welcome{padding:16px;text-align:center}
+  .welcome h1{background:#4caf50;color:#fff;padding:12px;border-radius:10px}
+  .welcome p{color:#333;font-size:14px;margin:12px 0}
+  .single-btn{max-width:360px;margin:24px auto 0}
+  .btn{background:#fff;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1);padding:16px;cursor:pointer;text-align:center;font-weight:700}
+  .btn:hover{background:#e3f2fd}
+  #examPage{display:none}
+</style><!-- ===== Styles: Exam Page (from your provided HTML) ===== --><style>
+  :root{--bg:#f3f8ff;--card:#fff;--accent:#2563eb;--muted:#64748b}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#eef6ff,#f8fbff)}
+  body{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .wrap{max-width:1100px;margin:20px auto;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.06)}
+  h1{margin:0 0 6px;font-size:20px;color:#0f172a}
+  p.small{margin:0 0 12px;color:var(--muted)}
+  label{display:block;margin:8px 0 6px;color:#334155;font-weight:600}
+  input[type=text], select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef8;font-size:15px}
+  .btn{display:inline-block;width:100%;padding:12px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#06b6d4);color:#fff;border:none;font-weight:700;cursor:pointer}
+  .btn-muted{background:#eef2ff;color:#0f172a}
+  #qr-reader{margin-top:12px;border-radius:10px;overflow:hidden;display:none}
+  #examFrame{width:100%;height:100vh;border:none;display:none}
+  #topBar{position:fixed;left:0;right:0;top:0;z-index:450;display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(90deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));box-shadow:0 4px 18px rgba(2,6,23,0.12)}
+  #timerDisplay{font-weight:800;color:#111827}
+  #backBtn{background:rgba(0,0,0,.6);color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:600;color:#fff}
+  .overlay-box{background:#071129;padding:20px;border-radius:12px;text-align:center;max-width:420px}
+  .overlay-box h2{color:#ff6b6b;margin:0 0 8px}
+  /* watermark */
+  .watermark{position:fixed;inset:0;pointer-events:none;z-index:440;opacity:.18;display:none}
+  .watermark canvas{width:100%;height:100%}
+  @media(max-width:900px){ .wrap{grid-template-columns:1fr;padding:12px} #topBar{padding:8px} }
+</style></head>
+<body oncontextmenu="return false"><!-- ===== Welcome Page ===== --><div id="welcomePage">
+  <div class="top">
+    <div id="clock">00:00:00</div>
+    <h2>Hallo, Selamat Datang</h2>
+    <p><i>"Ilmu bukanlah apa yang dihafal akan tetapi yang bermanfaat"</i></p>
+  </div>  <div class="welcome">
+    <h1>UJIAN TANPA KERTAS</h1>
+    <p>Dengan mengurangi penggunaan kertas menjadikan sekolah lebih ramah lingkungan serta berpartisipasi secara global mengurangi sampah dan penebangan pohon.</p>
+    <b style="color:#4caf50">GO GREEN</b>
+  </div>  <div class="single-btn">
+    <div class="btn" onclick="openExam()">MASUK KE HALAMAN UTAMA</div>
+  </div>
+</div><!-- ===== Exam Page (your full HTML inserted) ===== --><div id="examPage" style="display:none">  <!-- TOP BAR (timer + back) -->  <div id="topBar">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="font-weight:700">Indonesia Pintar</div>
+      <div id="timerDisplay">00:00:00</div>
+    </div>
+    <div id="backBtn">⬅ Kembali</div>
+  </div>  <!-- MAIN LOGIN UI -->  <div class="wrap" id="mainUI">
+    <div class="card">
+      <h1>Indonesia Pintar — Login</h1>
+      <p class="small">Isi nama, pilih durasi ujian (guru), lalu scan QR atau masukkan KODE/URL. QR bisa berisi format <code>KODE</code>, <code>URL</code>, atau <code>KODE|30</code> untuk override durasi menit.</p><label>Nama Siswa</label>
+  <input id="studentName" type="text" placeholder="Contoh: isi nama kamu" autocomplete="off"/>
+
+  <label>Durasi Ujian (menit)</label>
+  <select id="examDuration">
+    <option value="">Pilih durasi</option>
+    <option value="15">15</option>
+    <option value="30">30</option>
+    <option value="45">45</option>
+    <option value="60">60</option>
+    <option value="80">80</option>
+    <option value="100">100</option>
+  </select>
+
+  <label>Kode / Link Ujian</label>
+  <input id="examUrl" type="text" placeholder="Scan atau ketik KODE/URL (opsional)" autocomplete="off"/>
+
+  <div style="display:flex;gap:10px;margin-top:12px">
+    <button id="startBtn" class="btn" style="flex:1">Mulai Ujian</button>
+    <button id="scanBtn" class="btn btn-muted" style="flex:1">📷 Scan QR</button>
+  </div>
+
+  <div id="qr-reader"></div>
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+  <h1 style="font-size:18px;margin:0">Petunjuk Pengawas</h1>
+  <p class="small">1) Isi durasi sebelum siswa mulai. 2) QR dapat berisi kode atau URL Google Form. 3) Jika siswa keluar >3 detik → sesi akan direset.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button id="demoQRBtn" class="btn btn-muted">Contoh: ABC123</button>
+    <button id="hideUrlBtn" class="btn btn-muted">Sembunyikan Input URL</button>
+  </div>
+</div>
+
+  </div>  <!-- watermark overlay -->  <div class="watermark" id="watermark"><canvas id="wmCanvas"></canvas></div>  <!-- iframe yg menampilkan Google Form -->  <iframe id="examFrame" referrerpolicy="no-referrer" title="Ujian"></iframe>  <!-- overlay pelanggaran / selesai -->  <div class="overlay" id="overlay">
+    <div class="overlay-box">
+      <h2>⚠ Sesi Berakhir</h2>
+      <p id="overlayMsg">Anda keluar dari ujian atau waktu habis. Sesi direset.</p>
+      <button id="overlayOk" class="btn" style="width:auto;margin-top:10px">OK</button>
+    </div>
+  </div>  <!-- suara alarm --><audio id="alarmSound"><source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg"></audio>
+
+</div><!-- ===== Welcome Scripts (clock + switch) ===== --><script>
+  function updateClock(){
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0');
+    const m=String(now.getMinutes()).padStart(2,'0');
+    const s=String(now.getSeconds()).padStart(2,'0');
+    const clock=document.getElementById('clock');
+    if(clock) clock.textContent=`${h}:${m}:${s}`;
+  }
+  setInterval(updateClock,1000);updateClock();
+
+  function openExam(){
+    document.getElementById('welcomePage').style.display='none';
+    document.getElementById('examPage').style.display='block';
+  }
+</script><!-- ===== QR library for Exam Page ===== --><script src="https://unpkg.com/html5-qrcode"></script><!-- ===== Exam Scripts (from your provided HTML, with minor rename to avoid function name clash) ===== --><script>
+/* ========= EDIT: PETA KODE -> URL GOOGLE FORM ========== */
+const kodeKeUjian = {
+  "ABC123": "https://docs.google.com/forms/d/e/1FAIpQLSfExampleForm1/viewform",
+  "XYZ789": "https://docs.google.com/forms/d/e/1FAIpQLSfExampleForm2/viewform"
+};
+/* ======================================================= */
+
+const studentName = document.getElementById('studentName');
+const examDuration = document.getElementById('examDuration');
+const examUrl = document.getElementById('examUrl');
+const startBtn = document.getElementById('startBtn');
+const scanBtn = document.getElementById('scanBtn');
+const qrReader = document.getElementById('qr-reader');
+const mainUI = document.getElementById('mainUI');
+const examFrame = document.getElementById('examFrame');
+const topBar = document.getElementById('topBar');
+const timerDisplay = document.getElementById('timerDisplay');
+const backBtn = document.getElementById('backBtn');
+const overlay = document.getElementById('overlay');
+const overlayMsg = document.getElementById('overlayMsg');
+const overlayOk = document.getElementById('overlayOk');
+const alarmSound = document.getElementById('alarmSound');
+const watermark = document.getElementById('watermark');
+const wmCanvas = document.getElementById('wmCanvas');
+
+let html5QrCode = null;
+let ujianAktif = false;
+let blurTimeout = null;
+let suppressReset = false;
+let countdownInterval = null;
+
+/* SESSION (sessionStorage) key */
+const SESSION_KEY = '__indonesia_pintar_session_v1';
+
+/* Helpers */
+function resolveTarget(input){
+  if(!input) return null;
+  input = input.trim();
+  if(/^https?:\/\//i.test(input)) return input;
+  return kodeKeUjian[input] || null;
+}
+function addCacheBuster(url){
+  try{ const sep = url.includes('?') ? '&' : '?'; return url + sep + '__t=' + Date.now(); } catch(e){ return url; }
+}
+function pad(n){ return n<10 ? '0'+n : n; }
+
+/* Watermark drawing */
+function showWatermark(name){
+  watermark.style.display='block';
+  drawWatermark(name);
+  if(window._wmTimer) clearInterval(window._wmTimer);
+  window._wmTimer = setInterval(()=>drawWatermark(name),4000);
+}
+function hideWatermark(){
+  watermark.style.display='none';
+  if(window._wmTimer) clearInterval(window._wmTimer);
+}
+function drawWatermark(name){
+  const ctx = wmCanvas.getContext('2d');
+  wmCanvas.width = window.innerWidth;
+  wmCanvas.height = window.innerHeight;
+  ctx.clearRect(0,0,wmCanvas.width,wmCanvas.height);
+  ctx.save();
+  ctx.translate(wmCanvas.width/2, wmCanvas.height/2);
+  ctx.rotate(-Math.PI/6);
+  ctx.font = '18px Arial';
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.textAlign = 'center';
+  const stamp = new Date().toLocaleString();
+  const txt = `${name} • ${stamp}`;
+  const stepX = 320, stepY = 160;
+  for(let y=-wmCanvas.height; y<wmCanvas.height; y+=stepY){
+    for(let x=-wmCanvas.width; x<wmCanvas.width; x+=stepX){
+      ctx.fillText(txt, x, y);
+    }
+  }
+  ctx.restore();
+}
+window.addEventListener('resize', ()=>{ if(watermark.style.display==='block') drawWatermark(studentName.value.trim()||'Siswa'); });
+
+/* Timer */
+function startCountdown(endTimestamp){
+  if(countdownInterval) clearInterval(countdownInterval);
+  updateTimer(endTimestamp);
+  countdownInterval = setInterval(()=> updateTimer(endTimestamp), 1000);
+}
+function updateTimer(endTimestamp){
+  const now = Date.now();
+  const diff = Math.max(0, endTimestamp - now);
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  const s = Math.floor((diff%60000)/1000);
+  timerDisplay.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  if(diff <= 0){
+    clearInterval(countdownInterval);
+    overlayMsg.textContent = 'Waktu habis. Halaman akan ditutup.';
+    resetExam(true);
+  }
+}
+
+/* Session store in sessionStorage (survive reload in same tab) */
+function saveSession(session){
+  try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch(e){}
+}
+function loadSession(){
+  try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch(e){ return null; }
+}
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+/* Open exam UI (renamed to avoid clash with welcome openExam) */
+function openExamSession(session){
+  document.getElementById('welcomePage').style.display='none';
+  document.getElementById('examPage').style.display='block';
+  mainUI.style.display='none';
+  examFrame.src = addCacheBuster(session.target);
+  examFrame.style.display='block';
+  topBar.style.display='flex';
+  backBtn.style.display='inline-block';
+  ujianAktif = true;
+  showWatermark(session.name);
+  startCountdown(session.endTimestamp);
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  window._presenceTimer = setInterval(()=> localStorage.setItem('__ip_presence', Date.now().toString()), 1500);
+}
+
+/* Start exam (from form) */
+function startExam(){
+  const name = studentName.value.trim();
+  const dur = parseInt(examDuration.value,10);
+  const raw = examUrl.value.trim();
+  if(!name){ alert('Masukkan nama siswa'); return; }
+  if(!dur || isNaN(dur)){ alert('Pilih durasi ujian (menit)'); return; }
+  const target = resolveTarget(raw);
+  if(!target){ alert('Masukkan KODE/URL valid atau scan QR'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+  try{ enterFullscreen(); }catch(e){}
+}
+
+/* Start exam by QR (with optional dur override) */
+function startExamByTarget(target, durOverride){
+  const name = studentName.value.trim();
+  const dur = durOverride || parseInt(examDuration.value,10);
+  if(!name){ alert('Isi nama dulu sebelum scan'); return; }
+  if(!dur || isNaN(dur)){ alert('Durasi tidak valid. Set di form atau QR sebagai KODE|30'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+  try{ enterFullscreen(); }catch(e){}
+}
+
+/* End / Reset */
+function endExam(){
+  ujianAktif = false;
+  hideWatermark();
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  try{ window.close(); }catch(e){}
+  alert('Ujian selesai. Terima kasih.');
+}
+function resetExam(tryClose=false){
+  if(!ujianAktif) return;
+  ujianAktif = false;
+  hideWatermark();
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  overlay.style.display='flex';
+  alarmSound.currentTime = 0; alarmSound.play().catch(()=>{});
+  setTimeout(()=>{
+    try{ if(tryClose) window.close(); }catch(e){}
+  },600);
+}
+
+/* fullscreen helpers */
+function enterFullscreen(){ const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }
+function exitFullscreen(){ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }
+
+/* Back button (UI) */
+backBtn.addEventListener('click', ()=> {
+  suppressReset = true;
+  ujianAktif = false;
+  examFrame.src = 'about:blank';
+  examFrame.style.display='none';
+  topBar.style.display='none';
+  backBtn.style.display='none';
+  hideWatermark();
+  mainUI.style.display='grid';
+  clearSession();
+  if(window._presenceTimer) clearInterval(window._presenceTimer);
+  if(countdownInterval) clearInterval(countdownInterval);
+  try{ exitFullscreen(); }catch(e){}
+});
+
+/* overlay OK */
+overlayOk.addEventListener('click', ()=> { overlay.style.display='none'; });
+
+/* Block common shortcuts / copy / paste / right-click / print */
+['copy','cut','paste','selectstart','dragstart','drop'].forEach(ev => document.addEventListener(ev, e=>e.preventDefault(), {capture:true}));
+document.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('keydown', e=>{
+  const k = e.key.toUpperCase();
+  if(k==='F12' || ((e.ctrlKey||e.metaKey) && e.shiftKey && ['I','J','C'].includes(k)) || ((e.ctrlKey||e.metaKey) && ['U','S','P','C','X','V','A'].includes(k))){
+    e.preventDefault(); e.stopPropagation();
+  }
+  if(k === 'PRINTSCREEN' || k === 'PRTSC' || e.keyCode === 44){
+    resetExam();
+  }
+});
+
+/* Visibility: jika hidden > 3 detik -> reset */
+document.addEventListener('visibilitychange', ()=>{
+  if(ujianAktif){
+    if(document.hidden){
+      blurTimeout = setTimeout(()=>{ if(ujianAktif) resetExam(); }, 3000);
+    } else {
+      clearTimeout(blurTimeout);
+    }
+  }
+});
+
+/* fullscreen change */
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement){
+    if(suppressReset){ suppressReset=false; return; }
+    if(ujianAktif) resetExam();
+  }
+});
+
+/* message from iframe */
+window.addEventListener('message', e=>{ if(e.data === 'ujian_selesai') endExam(); });
+
+/* QR scanner setup */
+scanBtn.addEventListener('click', ()=>{
+  qrReader.style.display = 'block';
+  if(!html5QrCode) html5QrCode = new Html5Qrcode('qr-reader');
+  html5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: 250 },
+    decodedText => {
+      html5QrCode.stop().then(()=>{
+        qrReader.style.display='none';
+        const parts = decodedText.split('|').map(s=>s.trim());
+        const codeOrUrl = parts[0];
+        const override = parts[1] ? parseInt(parts[1],10) : null;
+        const target = resolveTarget(codeOrUrl) || (/^https?:\/\//i.test(codeOrUrl) ? codeOrUrl : null);
+        if(!target){ alert('Kode/URL tidak dikenal. Minta ke pengawas.'); return; }
+        startExamByTarget(target, override);
+      }).catch(()=>{ qrReader.style.display='none'; });
+    },
+    _err => {}
+  ).catch(err => alert('Gagal akses kamera: ' + err));
+});
+
+/* Multi-tab detection */
+(function multiTabDetect(){
+  try{
+    const key = '__ip_presence';
+    setInterval(()=> { if(ujianAktif) localStorage.setItem(key, Date.now().toString()); }, 1500);
+    window.addEventListener('storage', e => {
+      if(e.key === '__ip_presence' && ujianAktif){
+        resetExam();
+      }
+    });
+  }catch(e){}
+})();
+
+/* Restore session on reload (sessionStorage) */
+(function restoreSession(){
+  const s = (function(){ try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }catch(e){return null;} })();
+  if(s && s.target && s.endTimestamp && s.name){
+    if(Date.now() >= s.endTimestamp){ clearSession(); return; }
+    studentName.value = s.name;
+    examUrl.value = s.target;
+    const remainMin = Math.max(1, Math.ceil((s.endTimestamp - Date.now())/60000));
+    examDuration.value = remainMin.toString();
+    openExamSession(s);
+  }
+})();
+
+/* helpers: save session (duplicate kept as in original) */
+function saveSession(obj){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(obj)); }catch(e){} }
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+/* start button */
+startBtn.addEventListener('click', ()=>{
+  const raw = examUrl.value.trim();
+  const target = resolveTarget(raw) || ( /^https?:\/\//i.test(raw) ? raw : null );
+  if(!target){ alert('Masukkan KODE/URL valid atau scan QR'); return; }
+  const dur = parseInt(examDuration.value,10);
+  if(!dur || isNaN(dur)){ alert('Pilih durasi ujian'); return; }
+  const name = studentName.value.trim();
+  if(!name){ alert('Isi nama siswa'); return; }
+  const session = { name, target, endTimestamp: Date.now() + dur*60000 };
+  saveSession(session);
+  openExamSession(session);
+});
+
+/* helper demo & hide URL */
+document.getElementById('demoQRBtn').addEventListener('click', ()=> { examUrl.value='ABC123'; alert('Contoh kode ABC123 diisi'); });
+document.getElementById('hideUrlBtn').addEventListener('click', ()=> {
+  examUrl.style.display = examUrl.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('hideUrlBtn').innerText = examUrl.style.display === 'none' ? 'Tampilkan Input URL' : 'Sembunyikan Input URL';
+});
+
+/* defensive: detect big height changes (devtools) */
+let lastInnerHeight = window.innerHeight;
+setInterval(()=> {
+  if(ujianAktif && Math.abs(window.innerHeight - lastInnerHeight) > 220) resetExam();
+  lastInnerHeight = window.innerHeight;
+},1000);
+</script></body>
+</html>
